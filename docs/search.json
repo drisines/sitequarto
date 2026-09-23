@@ -1,0 +1,51 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Analyses Temporelles & Bivariées",
+    "section": "",
+    "text": "Cette page consolide les analyses effectuées sur les études incluses (1995-2022). Elle présente l’évolution temporelle des incertitudes de reporting et l’impact de différentes caractéristiques (SJR, Open Access, Enregistrement d’essais cliniques) sur le risque de biais évalué par Cochrane."
+  },
+  {
+    "objectID": "index.html#contexte-méthodologie",
+    "href": "index.html#contexte-méthodologie",
+    "title": "Analyses Temporelles & Bivariées",
+    "section": "",
+    "text": "Cette page consolide les analyses effectuées sur les études incluses (1995-2022). Elle présente l’évolution temporelle des incertitudes de reporting et l’impact de différentes caractéristiques (SJR, Open Access, Enregistrement d’essais cliniques) sur le risque de biais évalué par Cochrane."
+  },
+  {
+    "objectID": "index.html#évolution-temporelle-1995---2022",
+    "href": "index.html#évolution-temporelle-1995---2022",
+    "title": "Analyses Temporelles & Bivariées",
+    "section": "2. Évolution Temporelle (1995 - 2022)",
+    "text": "2. Évolution Temporelle (1995 - 2022)\nTrajectoires du biais (“Unclear risk”) selon la notoriété de la revue (SJR).\n\n\nSequence generationAllocation concealmentSelective reportingIncomplete outcome data"
+  },
+  {
+    "objectID": "index.html#analyses-bivariées-impact-sur-le-risque-de-biais",
+    "href": "index.html#analyses-bivariées-impact-sur-le-risque-de-biais",
+    "title": "Analyses Temporelles & Bivariées",
+    "section": "3. Analyses Bivariées : Impact sur le Risque de Biais",
+    "text": "3. Analyses Bivariées : Impact sur le Risque de Biais\nCette section évalue la relation entre différentes caractéristiques (Notoriété de la revue, Open Access, Enregistrement) et le niveau de risque de biais.\n\nNotoriété (SJR)Open AccessEssais Cliniques\n\n\n\n\nSequence generationAllocation concealmentSelective reportingIncomplete outcome data\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nTest statistique du Chi-2 :\n\n\n\n\nDomaine_Biais\n\n\nP_Value\n\n\nSignificatif\n\n\n\n\n\n\nSequence generation\n\n\n5e-04\n\n\nOui\n\n\n\n\nAllocation concealment\n\n\n5e-04\n\n\nOui\n\n\n\n\nSelective reporting\n\n\n5e-04\n\n\nOui\n\n\n\n\nIncomplete outcome data\n\n\n5e-04\n\n\nOui\n\n\n\n\n\n\n\n\n\nSequence generationAllocation concealmentSelective reportingIncomplete outcome data\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nTest statistique du Chi-2 :\n\n\n\n\nDomaine_Biais\n\n\nP_Value\n\n\nSignificatif\n\n\n\n\n\n\nSequence generation\n\n\n5e-04\n\n\nOui\n\n\n\n\nAllocation concealment\n\n\n5e-04\n\n\nOui\n\n\n\n\nSelective reporting\n\n\n5e-04\n\n\nOui\n\n\n\n\nIncomplete outcome data\n\n\n5e-04\n\n\nOui\n\n\n\n\n\n\n\n\n\nSequence generationAllocation concealmentSelective reportingIncomplete outcome data\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nTest statistique du Chi-2 :\n\n\n\n\nDomaine_Biais\n\n\nP_Value\n\n\nSignificatif\n\n\n\n\n\n\nSequence generation\n\n\n5e-04\n\n\nOui\n\n\n\n\nAllocation concealment\n\n\n5e-04\n\n\nOui\n\n\n\n\nSelective reporting\n\n\n5e-04\n\n\nOui\n\n\n\n\nIncomplete outcome data\n\n\n5e-04\n\n\nOui"
+  },
+  {
+    "objectID": "index.html#modèles-de-régression-logistique",
+    "href": "index.html#modèles-de-régression-logistique",
+    "title": "Analyses Temporelles & Bivariées",
+    "section": "4. Modèles de Régression Logistique",
+    "text": "4. Modèles de Régression Logistique\nÉvaluation multivariée des caractéristiques sur la probabilité de ne pas être en “Low risk” (i.e., High ou Unclear risk), avec ajustement sur l’année de l’étude à l’aide de splines naturelles (df=4).\n\nSequence generationAllocation concealmentSelective reportingIncomplete outcome data\n\n\nRégression sur SJR :\n\n\n\n\nterm\n\n\nOR\n\n\nIC95% bas\n\n\nIC95% haut\n\n\np-value\n\n\n\n\n\n\n(Intercept)\n\n\n0.1751494\n\n\n0.1063333\n\n\n0.2863312\n\n\n0\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)No SJR\n\n\n1.4177324\n\n\n1.3435047\n\n\n1.4958548\n\n\n0\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)Q2\n\n\n1.3150318\n\n\n1.2705334\n\n\n1.3611135\n\n\n0\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)Q3\n\n\n1.6807580\n\n\n1.6239202\n\n\n1.7396342\n\n\n0\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)Q4\n\n\n2.2814522\n\n\n2.2037180\n\n\n2.3620226\n\n\n0\n\n\n\n\n Régression sur Open Access :\n\n\n\n\nterm\n\n\nOR\n\n\nIC95% bas\n\n\nIC95% haut\n\n\np-value\n\n\n\n\n\n\n(Intercept)\n\n\n0.2261646\n\n\n0.1372193\n\n\n0.3697429\n\n\n0\n\n\n\n\nrelevel(oa_group, ref = “Closed”)Open access\n\n\n0.8115418\n\n\n0.7918596\n\n\n0.8317054\n\n\n0\n\n\n\n\n Régression sur Registre d’Essai Clinique :\n\n\n\n\nterm\n\n\nOR\n\n\nIC95% bas\n\n\nIC95% haut\n\n\np-value\n\n\n\n\n\n\n(Intercept)\n\n\n0.2039231\n\n\n0.1239367\n\n\n0.3328722\n\n\n0\n\n\n\n\nrelevel(trial_group, ref = “No registry ID found”)Trial registry ID found\n\n\n0.6884630\n\n\n0.6437928\n\n\n0.7357395\n\n\n0\n\n\n\n\n\n\nRégression sur SJR :\n\n\n\n\nterm\n\n\nOR\n\n\nIC95% bas\n\n\nIC95% haut\n\n\np-value\n\n\n\n\n\n\n(Intercept)\n\n\n0.0377671\n\n\n0.0167786\n\n\n0.083793\n\n\n0\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)No SJR\n\n\n1.3868518\n\n\n1.3238666\n\n\n1.452824\n\n\n0\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)Q2\n\n\n1.3952014\n\n\n1.3548508\n\n\n1.436771\n\n\n0\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)Q3\n\n\n1.8642983\n\n\n1.8097029\n\n\n1.920583\n\n\n0\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)Q4\n\n\n2.6839563\n\n\n2.6028200\n\n\n2.767726\n\n\n0\n\n\n\n\n Régression sur Open Access :\n\n\n\n\nterm\n\n\nOR\n\n\nIC95% bas\n\n\nIC95% haut\n\n\np-value\n\n\n\n\n\n\n(Intercept)\n\n\n0.0395483\n\n\n0.0174634\n\n\n0.0881768\n\n\n0\n\n\n\n\nrelevel(oa_group, ref = “Closed”)Open access\n\n\n0.7766113\n\n\n0.7600908\n\n\n0.7934907\n\n\n0\n\n\n\n\n Régression sur Registre d’Essai Clinique :\n\n\n\n\nterm\n\n\nOR\n\n\nIC95% bas\n\n\nIC95% haut\n\n\np-value\n\n\n\n\n\n\n(Intercept)\n\n\n0.0325486\n\n\n0.0144111\n\n\n0.0724249\n\n\n0\n\n\n\n\nrelevel(trial_group, ref = “No registry ID found”)Trial registry ID found\n\n\n0.6844396\n\n\n0.6454769\n\n\n0.7255845\n\n\n0\n\n\n\n\n\n\nRégression sur SJR :\n\n\n\n\nterm\n\n\nOR\n\n\nIC95% bas\n\n\nIC95% haut\n\n\np-value\n\n\n\n\n\n\n(Intercept)\n\n\n0.835279\n\n\n0.5102696\n\n\n1.368449\n\n\n0.4739932\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)No SJR\n\n\n1.527583\n\n\n1.4478520\n\n\n1.611616\n\n\n0.0000000\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)Q2\n\n\n1.333221\n\n\n1.2883251\n\n\n1.379701\n\n\n0.0000000\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)Q3\n\n\n1.523195\n\n\n1.4716442\n\n\n1.576582\n\n\n0.0000000\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)Q4\n\n\n1.833714\n\n\n1.7709694\n\n\n1.898735\n\n\n0.0000000\n\n\n\n\n Régression sur Open Access :\n\n\n\n\nterm\n\n\nOR\n\n\nIC95% bas\n\n\nIC95% haut\n\n\np-value\n\n\n\n\n\n\n(Intercept)\n\n\n1.0765666\n\n\n0.6588505\n\n\n1.7589708\n\n\n0.7681193\n\n\n\n\nrelevel(oa_group, ref = “Closed”)Open access\n\n\n0.8387924\n\n\n0.8182216\n\n\n0.8598729\n\n\n0.0000000\n\n\n\n\n Régression sur Registre d’Essai Clinique :\n\n\n\n\nterm\n\n\nOR\n\n\nIC95% bas\n\n\nIC95% haut\n\n\np-value\n\n\n\n\n\n\n(Intercept)\n\n\n0.9865585\n\n\n0.6042284\n\n\n1.611159\n\n\n0.9568163\n\n\n\n\nrelevel(trial_group, ref = “No registry ID found”)Trial registry ID found\n\n\n0.6527327\n\n\n0.6116344\n\n\n0.696264\n\n\n0.0000000\n\n\n\n\n\n\nRégression sur SJR :\n\n\n\n\nterm\n\n\nOR\n\n\nIC95% bas\n\n\nIC95% haut\n\n\np-value\n\n\n\n\n\n\n(Intercept)\n\n\n0.453553\n\n\n0.3071257\n\n\n0.6660725\n\n\n6.16e-05\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)No SJR\n\n\n1.149460\n\n\n1.0860592\n\n\n1.2163080\n\n\n1.40e-06\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)Q2\n\n\n1.206038\n\n\n1.1643714\n\n\n1.2492102\n\n\n0.00e+00\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)Q3\n\n\n1.344730\n\n\n1.2978459\n\n\n1.3933273\n\n\n0.00e+00\n\n\n\n\nrelevel(sjr_group, ref = “Q1 highest SJR”)Q4\n\n\n1.523811\n\n\n1.4702090\n\n\n1.5793980\n\n\n0.00e+00\n\n\n\n\n Régression sur Open Access :\n\n\n\n\nterm\n\n\nOR\n\n\nIC95% bas\n\n\nIC95% haut\n\n\np-value\n\n\n\n\n\n\n(Intercept)\n\n\n0.5340326\n\n\n0.3617585\n\n\n0.7838189\n\n\n0.0014587\n\n\n\n\nrelevel(oa_group, ref = “Closed”)Open access\n\n\n0.9022389\n\n\n0.8793810\n\n\n0.9256786\n\n\n0.0000000\n\n\n\n\n Régression sur Registre d’Essai Clinique :\n\n\n\n\nterm\n\n\nOR\n\n\nIC95% bas\n\n\nIC95% haut\n\n\np-value\n\n\n\n\n\n\n(Intercept)\n\n\n0.5070459\n\n\n0.3436419\n\n\n0.7438632\n\n\n0.0005604\n\n\n\n\nrelevel(trial_group, ref = “No registry ID found”)Trial registry ID found\n\n\n0.9424761\n\n\n0.8843492\n\n\n1.0040211\n\n\n0.0672556"
+  },
+  {
+    "objectID": "corpus_recuperation.html#profils-et-statistiques-par-corpus",
+    "href": "corpus_recuperation.html#profils-et-statistiques-par-corpus",
+    "title": "Données & Récupération",
+    "section": "",
+    "text": "Ongoing StudiesAwaiting AssessmentIncluded Studies\n\n\n\nVue Globale (Récupération)Open AccessNotoriété (SJR)Essais Cliniques\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nVue Globale (Récupération)Open AccessNotoriété (SJR)Essais Cliniques\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nVue Globale (Récupération)Open AccessNotoriété (SJR)Essais Cliniques"
+  },
+  {
+    "objectID": "corpus_recuperation.html",
+    "href": "corpus_recuperation.html",
+    "title": "Données & Récupération",
+    "section": "",
+    "text": "Ongoing StudiesAwaiting AssessmentIncluded Studies\n\n\n\nVue Globale (Récupération)Open AccessNotoriété (SJR)Essais Cliniques\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nVue Globale (Récupération)Open AccessNotoriété (SJR)Essais Cliniques\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nVue Globale (Récupération)Open AccessNotoriété (SJR)Essais Cliniques"
+  }
+]

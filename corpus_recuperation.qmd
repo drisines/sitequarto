@@ -1,0 +1,368 @@
+---
+title: "Données & Récupération"
+subtitle: "Statistiques descriptives et taux d'enrichissement par corpus"
+format:
+  html:
+    page-layout: full
+    toc: true
+    toc-title: "Sommaire"
+---
+
+
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(tidyr)
+library(scales)
+library(knitr)
+library(kableExtra)
+
+# 1. CHEMINS DES FICHIERS
+chemin_ongoing  <- "C:/Users/inesd/Documents/repo/data_output/ongoing_studies_maj.xlsx"
+chemin_awaiting <- "C:/Users/inesd/Documents/repo/data_output/awaiting_assessment_maj.xlsx"
+chemin_included <- "C:/Users/inesd/Documents/repo/data_output/included_studies_maj.xlsx"
+
+lire_fichier_securise <- function(chemin) {
+  if (file.exists(chemin)) {
+    read_excel(chemin, guess_max = 40000)
+  } else {
+    data.frame()
+  }
+}
+
+df_ongoing  <- lire_fichier_securise(chemin_ongoing)
+df_awaiting <- lire_fichier_securise(chemin_awaiting)
+df_included <- lire_fichier_securise(chemin_included)
+
+
+# 2. FONCTIONS - RECUPERATION GLOBALE & DOI
+colonnes_a_analyser <- c(
+  "open_access", "publisher", "dimensions_pmcid", "dimensions_pmid", 
+  "dimensions_clinical_trial_id", "supporting_grant_ids", "dimensions_type", 
+  "dimensions_year", "dimensions_date", "dimensions_funders", 
+  "crossref_funders", "europe_pmc_funders", "pubpeer_comments_count", 
+  "pubpeer_comments_text", "pubpeer_url", "sjr_score", 
+  "sjr_annee_utilisee", "sjr_ecart_annees", "nct_dimensions_tag", "isrctn_dimensions_tag"
+)
+
+preparer_global <- function(df) {
+  if (nrow(df) == 0) return(NULL)
+  if (!"doi" %in% names(df)) df$doi <- NA_character_
+  
+  for (col in colonnes_a_analyser) {
+    if (!col %in% names(df)) df[[col]] <- NA_character_
+  }
+  df %>%
+    select(any_of(c("doi", colonnes_a_analyser))) %>%
+    mutate(across(everything(), as.character)) %>%
+    pivot_longer(cols = any_of(colonnes_a_analyser), names_to = "Variable", values_to = "Valeur") %>%
+    mutate(
+      Statut = case_when(
+        is.na(doi) ~ "1. Pas de DOI à la base",
+        !is.na(doi) & is.na(Valeur) ~ "2. DOI présent mais rien récupéré",
+        !is.na(doi) & !is.na(Valeur) ~ "3. DOI présent et donnée récupérée"
+      )
+    ) %>%
+    count(Variable, Statut)
+}
+
+analyser_sauvetage_doi <- function(df) {
+  if (nrow(df) == 0) return(NULL)
+  if (!"pmid_doi" %in% names(df)) df$pmid_doi <- NA_character_
+  if (!"doi" %in% names(df)) df$doi <- NA_character_
+  
+  df %>%
+    mutate(
+      Statut = case_when(
+        !is.na(doi) & is.na(pmid_doi) ~ "1. DOI présent d'origine",
+        !is.na(pmid_doi) ~ "2. DOI récupéré via PMID",
+        is.na(doi) & is.na(pmid_doi) ~ "3. Aucun DOI (Échec)"
+      )
+    ) %>%
+    count(Statut) %>%
+    mutate(Pourcentage = n / sum(n), Label = paste0(n, "\n(", percent(Pourcentage, accuracy = 0.1), ")"))
+}
+
+analyser_match_dimensions <- function(df) {
+  if (nrow(df) == 0) return(NULL)
+  if (!"dimensions_year" %in% names(df)) df$dimensions_year <- NA
+  if (!"doi" %in% names(df)) df$doi <- NA_character_
+  
+  df %>%
+    mutate(
+      Statut = case_when(
+        is.na(doi) ~ "1. Pas de DOI",
+        !is.na(doi) & is.na(dimensions_year) ~ "2. DOI introuvable",
+        !is.na(doi) & !is.na(dimensions_year) ~ "3. Trouvé dans Dimensions"
+      )
+    ) %>%
+    count(Statut) %>%
+    mutate(Pourcentage = n / sum(n), Label = paste0(n, "\n(", percent(Pourcentage, accuracy = 0.1), ")"))
+}
+
+couleurs_doi <- c("1. DOI présent d'origine" = "#4A90E2", "2. DOI récupéré via PMID" = "#50E3C2", "3. Aucun DOI (Échec)" = "#E94E77")
+couleurs_dim <- c("1. Pas de DOI" = "#E94E77", "2. DOI introuvable" = "#F5A623", "3. Trouvé dans Dimensions" = "#6BCB77")
+
+creer_graphique_camembert <- function(df_stat, titre, couleurs) {
+  if (is.null(df_stat) || nrow(df_stat) == 0) return(plot(1, type="n", axes=F, xlab="", ylab="", main="Données indisponibles"))
+  ggplot(df_stat, aes(x = "", y = n, fill = Statut)) +
+    geom_bar(stat = "identity", width = 1, color = "white") +
+    coord_polar("y", start = 0) +
+    geom_text(aes(label = Label), position = position_stack(vjust = 0.5), size = 3.5, fontface = "bold", color = "white") +
+    scale_fill_manual(values = couleurs) +
+    labs(title = titre, fill = "Statut") + theme_void() +
+    theme(legend.position = "right", plot.title = element_text(face = "bold", size = 12, hjust = 0.5))
+}
+
+creer_graphique_global <- function(df_resume) {
+  if (is.null(df_resume) || nrow(df_resume) == 0) return(NULL)
+  ggplot(df_resume, aes(x = reorder(Variable, desc(Variable)), y = n, fill = Statut)) +
+    geom_bar(stat = "identity", position = "fill", color = "black", alpha = 0.8) +
+    coord_flip() + scale_y_continuous(labels = percent) +
+    scale_fill_manual(values = c("1. Pas de DOI à la base" = "#FF6B6B", "2. DOI présent mais rien récupéré" = "#FFD93D", "3. DOI présent et donnée récupérée" = "#6BCB77")) +
+    labs(title = "Taux de récupération par variable", x = "Variables", y = "Proportion (%)", fill = "") +
+    theme_minimal() + theme(legend.position = "bottom", axis.text.y = element_text(size = 10, face = "bold"), axis.text.x = element_text(size = 9))
+}
+
+# 3. FONCTIONS - OPEN ACCESS
+analyser_oa <- function(df) {
+  if (nrow(df) == 0 || !"open_access" %in% names(df)) return(NULL)
+  df_clean <- df %>% filter(!is.na(open_access) & trimws(open_access) != "")
+  if (nrow(df_clean) == 0) return(NULL)
+  df_clean %>%
+    separate_rows(open_access, sep = ";\\s*") %>%
+    count(open_access, name = "Nombre") %>% arrange(desc(Nombre)) %>%
+    mutate(Pourcentage = paste0(round((Nombre / nrow(df_clean)) * 100, 1), " %"))
+}
+
+creer_graphique_oa <- function(df_oa) {
+  if (is.null(df_oa)) return(NULL)
+  ggplot(df_oa, aes(x = reorder(open_access, Nombre), y = Nombre, fill = open_access)) +
+    geom_col(color = "black", alpha = 0.8) +
+    geom_text(aes(label = Nombre), hjust = -0.2, size = 4, fontface = "bold") +
+    coord_flip() + scale_fill_viridis_d(option = "turbo") +
+    labs(title = "Répartition des statuts Open Access", x = "Catégorie d'Open Access", y = "Nombre d'articles concernés") +
+    theme_minimal() + theme(legend.position = "none", axis.text.y = element_text(size = 11, face = "bold"), plot.title = element_text(face = "bold", size = 14)) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.15)))
+}
+
+# 4. FONCTIONS - SJR
+preparer_sjr <- function(df) {
+  if (nrow(df) == 0 || !"sjr_score" %in% names(df)) return(NULL)
+  df %>%
+    filter(!is.na(sjr_score) & trimws(sjr_score) != "") %>%
+    mutate(sjr_score = as.numeric(gsub(",", ".", sjr_score)), sjr_ecart_annees = as.numeric(sjr_ecart_annees)) %>%
+    filter(!is.na(sjr_score))
+}
+
+creer_graphique_score <- function(df_sjr) {
+  if (is.null(df_sjr) || nrow(df_sjr) == 0) return(NULL)
+  ggplot(df_sjr, aes(x = sjr_score)) +
+    geom_histogram(fill = "#3498DB", color = "black", alpha = 0.8, bins = 30) +
+    labs(title = "Distribution des scores SJR", x = "Score SJR", y = "Nombre d'articles") +
+    theme_minimal() + theme(plot.title = element_text(face = "bold", size = 14))
+}
+
+# 5. FONCTIONS - ESSAIS CLINIQUES (TAGS)
+couleurs_tags <- c("no_id_in_source_or_dimensions" = "#E0E0E0", "source_only" = "#F5A623", "same_id" = "#4A90E2", "same_id_plus_others" = "#50E3C2", "dimensions_only" = "#7ED321", "different_id" = "#9013FE", "different_ids" = "#D0021B")
+
+analyser_tags <- function(df, colonne_tag) {
+  if (nrow(df) == 0 || !colonne_tag %in% names(df)) return(NULL)
+  df_clean <- df %>% filter(!is.na(.data[[colonne_tag]]))
+  if (nrow(df_clean) == 0) return(NULL)
+  df_clean %>%
+    count(.data[[colonne_tag]]) %>%
+    rename(Tag = 1, Nombre = n) %>%
+    mutate(Pourcentage = round((Nombre / sum(Nombre)) * 100, 1), Label = paste0(Nombre, " (", Pourcentage, "%)"))
+}
+
+creer_graphique_tag <- function(df_tags, titre) {
+  if (is.null(df_tags)) return(NULL)
+  ggplot(df_tags, aes(x = reorder(Tag, Nombre), y = Nombre, fill = Tag)) +
+    geom_col(color = "black", alpha = 0.8) +
+    geom_text(aes(label = Label), hjust = -0.1, size = 4, fontface = "bold") +
+    coord_flip() + scale_fill_manual(values = couleurs_tags) +
+    labs(title = titre, x = "Statut de comparaison", y = "Nombre d'articles") +
+    theme_minimal() + theme(legend.position = "none", axis.text.y = element_text(size = 10, face = "bold"), plot.title = element_text(face = "bold", size = 13)) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.2)))
+}
+
+# Pré-calcul global
+df_global_ongoing  <- preparer_global(df_ongoing)
+df_global_awaiting <- preparer_global(df_awaiting)
+df_global_included <- preparer_global(df_included)
+```
+
+## Profils et Statistiques par Corpus
+::: {.panel-tabset}
+
+### Ongoing Studies
+:::: {.panel-tabset}
+
+#### Vue Globale (Récupération)
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| fig-width: 5
+#| fig-height: 4
+creer_graphique_camembert(analyser_sauvetage_doi(df_ongoing), "Sauvetage des DOI via PMID", couleurs_doi)
+creer_graphique_camembert(analyser_match_dimensions(df_ongoing), "Succès recherche Dimensions", couleurs_dim)
+```
+
+```{r}
+#| echo: false
+#| fig-align: center
+#| fig-width: 10
+#| fig-height: 6
+creer_graphique_global(df_global_ongoing)
+```
+
+#### Open Access
+
+```{r}
+#| echo: false
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+creer_graphique_oa(analyser_oa(df_ongoing))
+```
+
+
+#### Notoriété (SJR)
+
+```{r}
+#| echo: false
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+creer_graphique_score(preparer_sjr(df_ongoing))
+```
+
+
+#### Essais Cliniques
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| fig-width: 6
+#| fig-height: 4
+creer_graphique_tag(analyser_tags(df_ongoing, "nct_dimensions_tag"), "Tags NCT")
+creer_graphique_tag(analyser_tags(df_ongoing, "isrctn_dimensions_tag"), "Tags ISRCTN")
+```
+
+::::
+
+### Awaiting Assessment
+:::: {.panel-tabset}
+
+#### Vue Globale (Récupération)
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| fig-width: 5
+#| fig-height: 4
+creer_graphique_camembert(analyser_sauvetage_doi(df_awaiting), "Sauvetage des DOI via PMID", couleurs_doi)
+creer_graphique_camembert(analyser_match_dimensions(df_awaiting), "Succès recherche Dimensions", couleurs_dim)
+```
+
+```{r}
+#| echo: false
+#| fig-align: center
+#| fig-width: 10
+#| fig-height: 6
+creer_graphique_global(df_global_awaiting)
+```
+
+#### Open Access
+
+```{r}
+#| echo: false
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+creer_graphique_oa(analyser_oa(df_awaiting))
+```
+
+#### Notoriété (SJR)
+```{r}
+#| echo: false
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+creer_graphique_score(preparer_sjr(df_awaiting))
+```
+
+#### Essais Cliniques
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| fig-width: 6
+#| fig-height: 4
+creer_graphique_tag(analyser_tags(df_awaiting, "nct_dimensions_tag"), "Tags NCT")
+creer_graphique_tag(analyser_tags(df_awaiting, "isrctn_dimensions_tag"), "Tags ISRCTN")
+```
+
+::::
+
+### Included Studies
+:::: {.panel-tabset}
+
+#### Vue Globale (Récupération)
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| fig-width: 5
+#| fig-height: 4
+creer_graphique_camembert(analyser_sauvetage_doi(df_included), "Sauvetage des DOI via PMID", couleurs_doi)
+creer_graphique_camembert(analyser_match_dimensions(df_included), "Succès recherche Dimensions", couleurs_dim)
+```
+
+```{r}
+#| echo: false
+#| fig-align: center
+#| fig-width: 10
+#| fig-height: 6
+creer_graphique_global(df_global_included)
+```
+
+#### Open Access
+
+```{r}
+#| echo: false
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+creer_graphique_oa(analyser_oa(df_included))
+```
+
+#### Notoriété (SJR)
+
+```{r}
+#| echo: false
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+creer_graphique_score(preparer_sjr(df_included))
+```
+
+#### Essais Cliniques
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| fig-width: 6
+#| fig-height: 4
+creer_graphique_tag(analyser_tags(df_included, "nct_dimensions_tag"), "Tags NCT")
+creer_graphique_tag(analyser_tags(df_included, "isrctn_dimensions_tag"), "Tags ISRCTN")
+```
+::::
+
+:::

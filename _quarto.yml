@@ -1,0 +1,23 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Analyse de l'Enrichissement"
+  navbar:
+    left:
+      - href: index.qmd
+        text: "Accueil"
+      - href: corpus_recuperation.qmd
+        text: "Données & Récupération"
+
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    lang: fr
+    toc: true
+    toc-title: "Sommaire"
+    code-fold: true
+    code-summary: "Voir le code R"

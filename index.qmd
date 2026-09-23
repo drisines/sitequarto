@@ -1,0 +1,327 @@
+---
+title: "Analyses Temporelles & Bivariées"
+subtitle: "Études Incluses : Trajectoires et Impact sur le Risque de Biais"
+format:
+  html:
+    page-layout: full
+    toc: true
+    toc-title: "Sommaire"
+---
+  
+## 1. Contexte & Méthodologie
+  Cette page consolide les analyses effectuées sur les études incluses (1995-2022). Elle présente l'évolution temporelle des incertitudes de reporting et l'impact de différentes caractéristiques (SJR, Open Access, Enregistrement d'essais cliniques) sur le risque de biais évalué par Cochrane.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(data.table)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(broom)
+library(splines)
+library(stringr)
+
+chemin_rob1     <- "C:/Users/inesd/Documents/repo/biais/source/rob1_html_grouped_clean.csv"
+chemin_included <- "C:/Users/inesd/Documents/repo/data_output/included_studies_maj.xlsx"
+
+if (file.exists(chemin_rob1) & file.exists(chemin_included)) {
+  df_rob1 <- fread(chemin_rob1, data.table = FALSE)
+  df_included <- read_excel(chemin_included)
+  df_match <- inner_join(df_rob1, df_included, by = c("cochrane_IDs", "study" = "study_name"))
+  
+  df_analysis <- df_match %>%
+    mutate(dimensions_year = as.numeric(dimensions_year)) %>%
+    filter(!is.na(dimensions_year), dimensions_year >= 1995 & dimensions_year <= 2022)
+    
+  # Préparation centralisée des variables pour les analyses bivariées et modèles
+  df_analysis_prepared <- df_analysis %>%
+    mutate(
+      # Variables SJR
+      sjr_num = as.numeric(gsub(",", ".", sjr_score)),
+      sjr_cat = case_when(
+        is.na(sjr_num) ~ "Non indexé / Pas de DOI",
+        sjr_num >= 2.228 ~ "Q1 (Top 25% : SJR >= 2.23)",
+        sjr_num >= 1.313 ~ "Q2 (SJR 1.31 - 2.22)",
+        sjr_num >= 0.763 ~ "Q3 (SJR 0.76 - 1.31)",
+        TRUE ~ "Q4 (Bottom 25% : SJR < 0.76)"
+      ),
+      sjr_group = as.factor(case_when( 
+        is.na(sjr_num) ~ "No SJR",
+        sjr_num >= 2.228 ~ "Q1 highest SJR",
+        sjr_num >= 1.313 ~ "Q2",
+        sjr_num >= 0.763 ~ "Q3",
+        TRUE ~ "Q4"
+      )),
+      # Variables Open Access
+      oa_cat = case_when(
+        is.na(open_access) | trimws(open_access) == "" ~ "Non renseigné",
+        grepl("gold", open_access, ignore.case = TRUE) ~ "Gold OA (Revue)",
+        grepl("green", open_access, ignore.case = TRUE) ~ "Green OA (Archive)",
+        grepl("bronze", open_access, ignore.case = TRUE) ~ "Bronze OA (Lecture libre)",
+        grepl("oa_", open_access, ignore.case = TRUE) ~ "Autre OA",
+        TRUE ~ "Accès fermé (Closed)"
+      ),
+      oa_group = as.factor(case_when(
+        is.na(open_access) | trimws(open_access) == "" ~ "Unknown",
+        grepl("gold|green|bronze|oa_", open_access, ignore.case = TRUE) ~ "Open access",
+        TRUE ~ "Closed"
+      )),
+      # Variables Clinical Trials
+      registre_cat = case_when(
+        (!is.na(nct_inferred) & trimws(nct_inferred) != "") |
+        (!is.na(who_trial_id) & trimws(who_trial_id) != "") |
+        (!is.na(isrctn_id) & trimws(isrctn_id) != "") |
+        (!is.na(eudract_id) & trimws(eudract_id) != "") ~ "Essai enregistré",
+        TRUE ~ "Aucun registre détecté"
+      ),
+      trial_group = as.factor(case_when(
+        (!is.na(nct_inferred) & trimws(nct_inferred) != "") |
+        (!is.na(who_trial_id) & trimws(who_trial_id) != "") |
+        (!is.na(isrctn_id) & trimws(isrctn_id) != "") |
+        (!is.na(eudract_id) & trimws(eudract_id) != "") ~ "Trial registry ID found",
+        TRUE ~ "No registry ID found"
+      ))
+    ) %>%
+    mutate(
+      sjr_cat = factor(sjr_cat, levels = c("Q1 (Top 25% : SJR >= 2.23)", "Q2 (SJR 1.31 - 2.22)", "Q3 (SJR 0.76 - 1.31)", "Q4 (Bottom 25% : SJR < 0.76)", "Non indexé / Pas de DOI")),
+      oa_cat = factor(oa_cat, levels = c("Gold OA (Revue)", "Green OA (Archive)", "Bronze OA (Lecture libre)", "Accès fermé (Closed)")),
+      registre_cat = factor(registre_cat, levels = c("Essai enregistré", "Aucun registre détecté"))
+    )
+
+} else {
+  df_analysis_prepared <- data.frame()
+}
+
+titres_propres <- c(
+  "Random sequence generation (selection bias)"           = "Sequence generation",
+  "Allocation concealment (selection bias)"               = "Allocation concealment",
+  "Selective reporting (reporting bias)"                  = "Selective reporting",
+  "Incomplete outcome data (attrition bias) All outcomes" = "Incomplete outcome data"
+)
+colonnes_4_domaines <- names(titres_propres)
+
+extract_or <- function(model) {
+  broom::tidy(model, conf.int = TRUE, exponentiate = TRUE) %>%
+    filter(!str_detect(term, "splines::ns")) %>%
+    select(term, estimate, conf.low, conf.high, p.value) %>%
+    rename(OR = estimate, `IC95% bas` = conf.low, `IC95% haut` = conf.high, `p-value` = p.value)
+}
+```
+
+
+## 2. Évolution Temporelle (1995 - 2022)
+Trajectoires du biais ("Unclear risk") selon la notoriété de la revue (SJR).
+
+```{r}
+#| echo: false
+#| results: 'asis'
+#| fig-align: center
+#| fig-width: 9
+#| fig-height: 5.5
+
+couleurs_sjr <- c("Q1 (Top 25% : SJR >= 2.23)" = "#1874CD", "Q2 (SJR 1.31 - 2.22)" = "#CD2626", "Q3 (SJR 0.76 - 1.31)" = "#8B3A3A", "Q4 (Bottom 25% : SJR < 0.76)" = "#4A708B", "Non indexé / Pas de DOI" = "#EEAD0E")
+lignes_sjr <- c("Q1 (Top 25% : SJR >= 2.23)" = "solid", "Q2 (SJR 1.31 - 2.22)" = "dashed", "Q3 (SJR 0.76 - 1.31)" = "dotdash", "Q4 (Bottom 25% : SJR < 0.76)" = "dotted", "Non indexé / Pas de DOI" = "longdash")
+
+if (nrow(df_analysis_prepared) > 0) {
+  cat("::: {.panel-tabset}\n\n")
+  for (col in colonnes_4_domaines) {
+    cat("### ", titres_propres[[col]], "\n\n")
+    
+    df_plot_unclear <- df_analysis_prepared %>%
+      filter(.data[[col]] %in% c("Low risk", "High risk", "Unclear risk")) %>%
+      group_by(dimensions_year, sjr_cat) %>%
+      summarise(total = n(), unclear_count = sum(.data[[col]] == "Unclear risk"), prop_unclear = (unclear_count / total) * 100, .groups = "drop")
+    
+    p_repro_unclear <- ggplot(df_plot_unclear, aes(x = dimensions_year, y = prop_unclear, color = sjr_cat, linetype = sjr_cat)) +
+      geom_line(linewidth = 1) +
+      scale_color_manual(values = couleurs_sjr) +
+      scale_linetype_manual(values = lignes_sjr) +
+      scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20), expand = c(0, 0)) +
+      scale_x_continuous(breaks = seq(1995, 2022, by = 5)) +
+      labs(title = paste("Évolution :", titres_propres[[col]]), x = NULL, y = "Proportion of unclear risk (%)", color = NULL, linetype = NULL) +
+      theme_minimal() +
+      theme(plot.title = element_text(face = "bold", size = 12, hjust = 0, margin = margin(b = 10)), panel.background = element_rect(fill = "#EAEAEA", color = NA), panel.grid.major.y = element_line(color = "white", linewidth = 0.9), panel.grid.minor.y = element_blank(), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), axis.text = element_text(size = 10, color = "black"), axis.title.y = element_text(size = 10, face = "bold", margin = margin(r = 8)), legend.position = "bottom", legend.background = element_blank(), legend.key = element_blank(), legend.key.width = unit(1.8, "cm")) +
+      guides(color = guide_legend(nrow = 2, byrow = TRUE), linetype = guide_legend(nrow = 2, byrow = TRUE))
+    
+    print(p_repro_unclear)
+    cat("\n\n")
+  }
+  cat(":::\n\n")
+} else {
+  cat("<p style='color:red;'><b>Erreur :</b> Données introuvables.</p>")
+}
+```
+
+## 3. Analyses Bivariées : Impact sur le Risque de Biais
+Cette section évalue la relation entre différentes caractéristiques (Notoriété de la revue, Open Access, Enregistrement) et le niveau de risque de biais.
+
+::: {.panel-tabset}
+
+### Notoriété (SJR)
+
+```{r}
+#| echo: false
+#| results: 'asis'
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+
+if (nrow(df_analysis_prepared) > 0) {
+  cat("::: {.panel-tabset}\n\n")
+  for (col in colonnes_4_domaines) {
+    cat("#### ", titres_propres[[col]], "\n\n")
+    
+    df_bar_sjr <- df_analysis_prepared %>%
+      filter(.data[[col]] %in% c("Low risk", "High risk", "Unclear risk")) %>%
+      rename(Risque = all_of(col)) %>%
+      count(sjr_cat, Risque) %>%
+      group_by(sjr_cat) %>%
+      mutate(Pourcentage = (n / sum(n)) * 100) %>%
+      ungroup() %>%
+      mutate(Risque = factor(Risque, levels = c("High risk", "Unclear risk", "Low risk")))
+      
+    p_stacked <- ggplot(df_bar_sjr, aes(x = sjr_cat, y = Pourcentage, fill = Risque)) +
+      geom_col(width = 0.6) +
+      geom_text(aes(label = sprintf("%.1f%%", Pourcentage)), position = position_stack(vjust = 0.5), size = 3.5, color = "black") +
+      scale_fill_manual(values = c("Low risk" = "#2E8B57", "Unclear risk" = "#E69F00", "High risk" = "#D55E00")) +
+      labs(title = paste("Risque de biais selon la catégorie SJR :", titres_propres[[col]]), x = "Catégories SJR", y = "Proportion (%)", fill = "Niveau de risque") +
+      theme_minimal() +
+      theme(plot.title = element_text(face = "bold", size = 11), axis.text.x = element_text(angle = 25, hjust = 1, face = "bold"), legend.position = "right")
+    
+    print(p_stacked)
+    cat("\n\n")
+  }
+  cat(":::\n\n")
+  
+  cat("**Test statistique du Chi-2 :**\n\n")
+  res_chi2 <- lapply(colonnes_4_domaines, function(col) {
+    tab <- table(df_analysis_prepared$sjr_cat[df_analysis_prepared[[col]] %in% c("Low risk", "High risk", "Unclear risk")], df_analysis_prepared[[col]][df_analysis_prepared[[col]] %in% c("Low risk", "High risk", "Unclear risk")])
+    test <- suppressWarnings(chisq.test(tab, simulate.p.value = TRUE))
+    data.frame(Domaine_Biais = titres_propres[[col]], P_Value = round(test$p.value, 4), Significatif = ifelse(test$p.value < 0.05, "Oui", "Non"))
+  })
+  print(kable(bind_rows(res_chi2), format="html") %>% kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE))
+}
+```
+
+### Open Access
+
+```{r}
+#| echo: false
+#| results: 'asis'
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+
+if (nrow(df_analysis_prepared) > 0) {
+  df_oa <- df_analysis_prepared %>% filter(oa_cat %in% c("Gold OA (Revue)", "Green OA (Archive)", "Bronze OA (Lecture libre)", "Accès fermé (Closed)"))
+  
+  cat("::: {.panel-tabset}\n\n")
+  for (col in colonnes_4_domaines) {
+    cat("#### ", titres_propres[[col]], "\n\n")
+    
+    df_bar_oa <- df_oa %>% filter(.data[[col]] %in% c("Low risk", "High risk", "Unclear risk")) %>% rename(Risque = all_of(col)) %>% count(oa_cat, Risque) %>% group_by(oa_cat) %>% mutate(Pourcentage = (n / sum(n)) * 100) %>% ungroup() %>% mutate(Risque = factor(Risque, levels = c("High risk", "Unclear risk", "Low risk")))
+      
+    p_oa <- ggplot(df_bar_oa, aes(x = oa_cat, y = Pourcentage, fill = Risque)) +
+      geom_col(width = 0.6) + 
+      geom_text(aes(label = sprintf("%.1f%%", Pourcentage)), position = position_stack(vjust = 0.5), size = 3.5, color = "black") +
+      scale_fill_manual(values = c("Low risk" = "#2E8B57", "Unclear risk" = "#E69F00", "High risk" = "#D55E00")) +
+      labs(title = paste("Risque de biais selon le type d'Open Access :", titres_propres[[col]]), x = "Statut Open Access", y = "Proportion (%)", fill = "Niveau de risque") +
+      theme_minimal() +
+      theme(plot.title = element_text(face = "bold", size = 11), axis.text.x = element_text(size = 9, angle = 25, hjust = 1, face = "bold"), legend.position = "right")
+    
+    print(p_oa)
+    cat("\n\n")
+  }
+  cat(":::\n\n")
+  
+  cat("**Test statistique du Chi-2 :**\n\n")
+  res_chi2_oa <- lapply(colonnes_4_domaines, function(col) {
+    tab <- table(df_oa$oa_cat[df_oa[[col]] %in% c("Low risk", "High risk", "Unclear risk")], df_oa[[col]][df_oa[[col]] %in% c("Low risk", "High risk", "Unclear risk")])
+    test <- suppressWarnings(chisq.test(tab, simulate.p.value = TRUE))
+    data.frame(Domaine_Biais = titres_propres[[col]], P_Value = round(test$p.value, 4), Significatif = ifelse(test$p.value < 0.05, "Oui", "Non"))
+  })
+  print(kable(bind_rows(res_chi2_oa), format="html") %>% kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE))
+}
+```
+
+### Essais Cliniques
+
+```{r}
+#| echo: false
+#| results: 'asis'
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+
+if (nrow(df_analysis_prepared) > 0) {
+  cat("::: {.panel-tabset}\n\n")
+  for (col in colonnes_4_domaines) {
+    cat("#### ", titres_propres[[col]], "\n\n")
+
+df_bar_trial <- df_analysis_prepared %>% filter(.data[[col]] %in% c("Low risk", "High risk", "Unclear risk")) %>% rename(Risque = all_of(col)) %>% count(registre_cat, Risque) %>% group_by(registre_cat) %>% mutate(Pourcentage = (n / sum(n)) * 100) %>% ungroup() %>% mutate(Risque = factor(Risque, levels = c("High risk", "Unclear risk", "Low risk")))
+
+p_trial <- ggplot(df_bar_trial, aes(x = registre_cat, y = Pourcentage, fill = Risque)) +
+  geom_col(width = 0.5) +
+  geom_text(aes(label = sprintf("%.1f%%", Pourcentage)), position = position_stack(vjust = 0.5), size = 3.5, color = "black") +
+  scale_fill_manual(values = c("Low risk" = "#2E8B57", "Unclear risk" = "#E69F00", "High risk" = "#D55E00")) +
+  labs(title = paste("Risque de biais selon l'enregistrement :", titres_propres[[col]]), x = "Statut d'enregistrement de l'essai", y = "Proportion (%)", fill = "Niveau de risque") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 11), axis.text.x = element_text(size = 10, face = "bold"), legend.position = "right")
+
+print(p_trial)
+cat("\n\n")
+}
+cat(":::\n\n")
+
+cat("**Test statistique du Chi-2 :**\n\n")
+res_chi2_trial <- lapply(colonnes_4_domaines, function(col) {
+  tab <- table(df_analysis_prepared$registre_cat[df_analysis_prepared[[col]] %in% c("Low risk", "High risk", "Unclear risk")], df_analysis_prepared[[col]][df_analysis_prepared[[col]] %in% c("Low risk", "High risk", "Unclear risk")])
+  test <- suppressWarnings(chisq.test(tab, simulate.p.value = TRUE))
+  data.frame(Domaine_Biais = titres_propres[[col]], P_Value = round(test$p.value, 4), Significatif = ifelse(test$p.value < 0.05, "Oui", "Non"))
+})
+print(kable(bind_rows(res_chi2_trial), format="html") %>% kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE))
+}
+```
+
+:::
+  
+## 4. Modèles de Régression Logistique
+  Évaluation multivariée des caractéristiques sur la probabilité de ne pas être en "Low risk" (i.e., High ou Unclear risk), avec ajustement sur l'année de l'étude à l'aide de splines naturelles (df=4).
+
+::: {.panel-tabset}
+
+```{r}
+#| echo: false
+#| results: 'asis'
+
+if (nrow(df_analysis_prepared) > 0) {
+  for (col in colonnes_4_domaines) {
+    cat("### ", titres_propres[[col]], "\n\n")
+    
+    data_domain <- df_analysis_prepared %>%
+      rename(judgement = all_of(col)) %>%
+      filter(!is.na(study_year), judgement %in% c("Low risk", "High risk", "Unclear risk")) %>%
+      mutate(not_low_risk = judgement %in% c("High risk", "Unclear risk"))
+      
+    # Modèles
+    model_sjr <- glm(not_low_risk ~ relevel(sjr_group, ref = "Q1 highest SJR") + splines::ns(study_year, df = 4), family = binomial(), data = data_domain)
+    model_oa <- glm(not_low_risk ~ relevel(oa_group, ref = "Closed") + splines::ns(study_year, df = 4), family = binomial(), data = data_domain %>% filter(oa_group %in% c("Closed", "Open access")))
+    model_trial <- glm(not_low_risk ~ relevel(trial_group, ref = "No registry ID found") + splines::ns(study_year, df = 4), family = binomial(), data = data_domain)
+    
+    cat("**Régression sur SJR :**\n")
+    print(kable(extract_or(model_sjr), format="html") %>% kable_styling(bootstrap_options = "condensed", full_width = FALSE))
+    cat("\n<br>\n**Régression sur Open Access :**\n")
+    print(kable(extract_or(model_oa), format="html") %>% kable_styling(bootstrap_options = "condensed", full_width = FALSE))
+    cat("\n<br>\n**Régression sur Registre d'Essai Clinique :**\n")
+    print(kable(extract_or(model_trial), format="html") %>% kable_styling(bootstrap_options = "condensed", full_width = FALSE))
+    cat("\n\n")
+  }
+}
+```
+
+:::
